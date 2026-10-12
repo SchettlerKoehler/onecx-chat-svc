@@ -10,8 +10,10 @@ import jakarta.transaction.Transactional;
 
 import org.tkit.onecx.chat.domain.daos.ChatDAO;
 import org.tkit.onecx.chat.domain.daos.ConversationEntryDAO;
+import org.tkit.onecx.chat.domain.daos.MessageDAO;
 import org.tkit.onecx.chat.domain.models.Chat;
 import org.tkit.onecx.chat.domain.models.ConversationEntry;
+import org.tkit.onecx.chat.domain.models.Message;
 import org.tkit.onecx.chat.rs.internal.mappers.ChatMapper;
 import org.tkit.quarkus.jpa.exceptions.ConstraintException;
 
@@ -28,6 +30,9 @@ public class ConversationEntryService {
 
     @Inject
     ChatDAO chatDAO;
+
+    @Inject
+    MessageDAO messageDAO;
 
     @Inject
     ChatMapper chatMapper;
@@ -98,6 +103,7 @@ public class ConversationEntryService {
 
         entry.setSequence(nextSequence);
         dao.create(entry);
+        createMessageIfFinished(entry);
 
         return entry;
     }
@@ -127,7 +133,35 @@ public class ConversationEntryService {
             entry.setAgentConfigVersion(agentConfigVersion);
         }
 
-        return dao.update(entry);
+        final ConversationEntry updated = dao.update(entry);
+        createMessageIfFinished(updated);
+
+        return updated;
+    }
+
+    /**
+     * Creates the single chat message for a finished voice turn.
+     * <p>
+     * Only called on the first transition to a terminal state, since terminal entries
+     * are rejected by {@link #validateTerminalState(ConversationEntry)}. The message type
+     * mirrors the entry's type so that voice turns appear in the existing message history
+     * alongside typed chat.
+     */
+    private void createMessageIfFinished(ConversationEntry entry) {
+        if (!isTerminal(entry.getStatus()) || entry.getText() == null || entry.getText().isBlank()) {
+            return;
+        }
+        Message message = new Message();
+        message.setChat(entry.getChat());
+        message.setText(entry.getText());
+        message.setType(entry.getType() == ConversationEntry.EntryType.HUMAN ? Message.MessageType.HUMAN
+                : Message.MessageType.ASSISTANT);
+        messageDAO.create(message);
+    }
+
+    private boolean isTerminal(ConversationEntry.EntryStatus status) {
+        return status == ConversationEntry.EntryStatus.COMPLETED
+                || status == ConversationEntry.EntryStatus.INTERRUPTED;
     }
 
     /**
