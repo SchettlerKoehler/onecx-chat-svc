@@ -29,8 +29,9 @@ public class ChatsV1Controller implements ChatApi {
     @Override
     public Response getChatForUser(String chatId) {
         var principal = ApplicationContext.get().getPrincipal();
-        if (principal == null || principal.isBlank()) {
-            // fail closed without a principal
+        // the tkit principal resolver never returns a blank name (blank values fall through to the
+        // default principal, which is unset), so a null check is enough to fail closed
+        if (principal == null) {
             return Response.status(NOT_FOUND).build();
         }
         // null if the chat does not exist, belongs to another tenant or the principal is neither
