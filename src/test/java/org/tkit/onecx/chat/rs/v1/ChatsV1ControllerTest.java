@@ -12,6 +12,7 @@ import org.tkit.quarkus.security.test.GenerateKeycloakClient;
 import org.tkit.quarkus.test.WithDBData;
 
 import gen.org.tkit.onecx.chat.rs.v1.model.ChatV1DTO;
+import io.quarkus.test.common.http.TestHTTPEndpoint;
 import io.quarkus.test.junit.QuarkusTest;
 
 /**
@@ -24,6 +25,7 @@ import io.quarkus.test.junit.QuarkusTest;
  * cannot probe for the existence of a chat they may not access.
  */
 @QuarkusTest
+@TestHTTPEndpoint(ChatsV1Controller.class)
 @WithDBData(value = "data/testdata-v1.xml", deleteBeforeInsert = true, deleteAfterTest = true, rinseAndRepeat = true)
 @GenerateKeycloakClient(clientName = "testClient", scopes = { "ocx-chat:read" })
 class ChatsV1ControllerTest extends AbstractTest {
