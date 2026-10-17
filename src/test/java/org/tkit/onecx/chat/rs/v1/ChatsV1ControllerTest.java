@@ -6,6 +6,10 @@ import static jakarta.ws.rs.core.Response.Status.NOT_FOUND;
 import static jakarta.ws.rs.core.Response.Status.OK;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import jakarta.json.Json;
+import jakarta.json.JsonObjectBuilder;
+
+import org.eclipse.microprofile.jwt.Claims;
 import org.junit.jupiter.api.Test;
 import org.tkit.onecx.chat.test.AbstractTest;
 import org.tkit.quarkus.security.test.GenerateKeycloakClient;
@@ -14,6 +18,8 @@ import org.tkit.quarkus.test.WithDBData;
 import gen.org.tkit.onecx.chat.rs.v1.model.ChatV1DTO;
 import io.quarkus.test.common.http.TestHTTPEndpoint;
 import io.quarkus.test.junit.QuarkusTest;
+import io.smallrye.jwt.build.Jwt;
+import io.smallrye.jwt.util.KeyUtils;
 
 /**
  * Tests for the principal-aware {@code GET /v1/chats/{chatId}} operation.
@@ -111,5 +117,59 @@ class ChatsV1ControllerTest extends AbstractTest {
                 .get()
                 .then()
                 .statusCode(NOT_FOUND.getStatusCode());
+    }
+
+    @Test
+    void missingPrincipalTokenReceivesNotFound() {
+        // no apm-principal-token -> no principal -> fail closed even for the owner's chat
+        given()
+                .auth().oauth2(getKeycloakClientToken("testClient"))
+                .contentType(APPLICATION_JSON)
+                .pathParam("chatId", "t-chat-v1-owner-01")
+                .get()
+                .then()
+                .statusCode(NOT_FOUND.getStatusCode());
+    }
+
+    @Test
+    void principalTokenWithoutSubReceivesNotFound() {
+        given()
+                .auth().oauth2(getKeycloakClientToken("testClient"))
+                .contentType(APPLICATION_JSON)
+                .header(APM_HEADER_PARAM, createTokenWithSub("org1", null))
+                .pathParam("chatId", "t-chat-v1-owner-01")
+                .get()
+                .then()
+                .statusCode(NOT_FOUND.getStatusCode());
+    }
+
+    @Test
+    void principalTokenWithBlankSubReceivesNotFound() {
+        given()
+                .auth().oauth2(getKeycloakClientToken("testClient"))
+                .contentType(APPLICATION_JSON)
+                .header(APM_HEADER_PARAM, createTokenWithSub("org1", " "))
+                .pathParam("chatId", "t-chat-v1-owner-01")
+                .get()
+                .then()
+                .statusCode(NOT_FOUND.getStatusCode());
+    }
+
+    /**
+     * Same as {@link #createToken(String)} but with a custom {@code sub} claim; {@code null} omits the claim.
+     * {@code preferred_username} is kept as "test-user" so only the {@code sub} claim differs.
+     */
+    private static String createTokenWithSub(String organizationId, String sub) {
+        try {
+            JsonObjectBuilder claims = Json.createObjectBuilder();
+            claims.add(Claims.preferred_username.name(), "test-user");
+            if (sub != null) {
+                claims.add(Claims.sub.name(), sub);
+            }
+            claims.add(CLAIMS_ORG_ID, organizationId);
+            return Jwt.claims(claims.build()).sign(KeyUtils.generateKeyPair(2048).getPrivate());
+        } catch (Exception ex) {
+            throw new IllegalStateException(ex);
+        }
     }
 }
