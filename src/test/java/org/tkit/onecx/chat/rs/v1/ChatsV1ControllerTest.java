@@ -36,7 +36,8 @@ class ChatsV1ControllerTest extends AbstractTest {
                 .auth().oauth2(getKeycloakClientToken("testClient"))
                 .contentType(APPLICATION_JSON)
                 .header(APM_HEADER_PARAM, createToken("org1"))
-                .get("/v1/chats/t-chat-v1-owner-01")
+                .pathParam("chatId", "t-chat-v1-owner-01")
+                .get()
                 .then()
                 .statusCode(OK.getStatusCode())
                 .contentType(APPLICATION_JSON)
@@ -57,7 +58,8 @@ class ChatsV1ControllerTest extends AbstractTest {
                 .auth().oauth2(getKeycloakClientToken("testClient"))
                 .contentType(APPLICATION_JSON)
                 .header(APM_HEADER_PARAM, createToken("org1"))
-                .get("/v1/chats/t-chat-v1-group-01")
+                .pathParam("chatId", "t-chat-v1-group-01")
+                .get()
                 .then()
                 .statusCode(OK.getStatusCode())
                 .contentType(APPLICATION_JSON)
@@ -80,7 +82,8 @@ class ChatsV1ControllerTest extends AbstractTest {
                 .auth().oauth2(getKeycloakClientToken("testClient"))
                 .contentType(APPLICATION_JSON)
                 .header(APM_HEADER_PARAM, createToken("org1"))
-                .get("/v1/chats/t-chat-v1-other-01")
+                .pathParam("chatId", "t-chat-v1-other-01")
+                .get()
                 .then()
                 .statusCode(NOT_FOUND.getStatusCode());
     }
@@ -92,7 +95,8 @@ class ChatsV1ControllerTest extends AbstractTest {
                 .auth().oauth2(getKeycloakClientToken("testClient"))
                 .contentType(APPLICATION_JSON)
                 .header(APM_HEADER_PARAM, createToken("org1"))
-                .get("/v1/chats/t-chat-v1-xtenant-01")
+                .pathParam("chatId", "t-chat-v1-xtenant-01")
+                .get()
                 .then()
                 .statusCode(NOT_FOUND.getStatusCode());
     }
@@ -103,7 +107,8 @@ class ChatsV1ControllerTest extends AbstractTest {
                 .auth().oauth2(getKeycloakClientToken("testClient"))
                 .contentType(APPLICATION_JSON)
                 .header(APM_HEADER_PARAM, createToken("org1"))
-                .get("/v1/chats/does-not-exist")
+                .pathParam("chatId", "does-not-exist")
+                .get()
                 .then()
                 .statusCode(NOT_FOUND.getStatusCode());
     }
